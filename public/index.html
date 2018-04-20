@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+
+<title>HZ</title>
+<script src="https://code.jquery.com/jquery-2.0.3.min.js"></script>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="./cvi_busy_lib.js"></script>
+
+<script>
+var isXS = false;
+$(function(){
+  init();
+});
+
+function init(){
+  //var sw = window.parent.screen.width;
+  var sw = window.innerWidth;
+  isXS = ( sw < 768 );
+  //console.log( 'sw = ' + sw + ', isXS = ' + isXS );
+
+  var a = '<a class="list-group-item list-group-item-warning" href="#">'
+    + '<h3 class="list-group-item-heading">Loading..</h3>'
+    + '</a>';
+  $('#floor_list').append( a );
+
+  getFloors();
+}
+
+var floors = [];
+function getFloors(){
+  var obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'loading..', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
+  floors = [];
+  $.ajax({
+    type: 'GET',
+    url: '/floors',
+    success: function( result ){
+      obj.remove();
+      var result = JSON.parse( result );
+      if( result.status && result.results && result.results.length ){
+        floors = result.results;
+
+        if( isXS ){
+          $('#floor_list').html( '<select class="form-control" id="floorpicker" style="width:100%;"></select>' );
+          floors.forEach( function( floor ){ //. { "floor": 8 }
+            var o = '<option id=\'floor_' + floor.floor + '\' value=\'' + JSON.stringify( floor.floor ) + '\'>' + floor.floor + '</option>';
+            $('#floorpicker').prepend( o );
+          });
+
+          $('#floorpicker').change( function(){
+            var floor = JSON.parse( $(this).val() );
+            getPlacesByFloor( floor );
+          });
+        }else{
+          $('#floor_list').html( '' );
+          floors.forEach( function( floor ){
+            var a = '<a id=\'floor_' + floor.floor + '\' class=\'list-group-item\' href=\'#\' onClick=\'getPlacesByFloor(' + floor.floor + ')\'>'
+              + '<h3 class=\'list-group-item-heading\'>' + floor.floor + '</h3>'
+              + '</a>';
+            $('#floor_list').prepend( a );
+          });
+        }
+      }
+    },
+    error: function( err ){
+      obj.remove();
+      console.log( err );
+    }
+  });
+}
+
+var places = [];
+function getPlacesByFloor( floor ){
+  $('#price_list').html( '' );
+
+  var obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'loading..', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
+  places = [];
+  $.ajax({
+    type: 'GET',
+    url: '/placesByFloor?floor=' + floor,
+    success: function( result ){
+      obj.remove();
+      var result = JSON.parse( result );
+      if( result.status && result.results && result.results.length ){
+        places = result.results;
+
+        $('#item_list').html( '<select class="form-control" id="itempicker" style="width:100%;"></select>' );
+        places.forEach( function( place ){ //. { "id":"8RN", "name":"8RN自販機" }
+          getItemsByPlaceId( place.id );
+        });
+
+        $('#itempicker').change( function(){
+          var item_id = JSON.parse( $(this).val() );
+          getPricesByItemId( item_id );
+        });
+      }
+    },
+    error: function( err ){
+      obj.remove();
+      console.log( err );
+    }
+  });
+}
+
+var items = [];
+function getItemsByPlaceId( place_id ){
+  items = [];
+  $.ajax({
+    type: 'GET',
+    url: '/itemsByPlaceId?place_id=' + place_id,
+    success: function( result ){
+      var result = JSON.parse( result );
+      if( result.status && result.results && result.results.length ){
+        items = result.results;
+        items.forEach( function( item ){ //. { "item_id": 151, "name": "", "price": 100 }
+          var o = '<option id=\'item_' + item.item_id + '\' value=\'' + item.item_id + '\'>' + item.name + '</option>';
+          $('#itempicker').append( o );
+        });
+
+        $('#itempicker').change( function(){
+          var item_id = JSON.parse( $(this).val() );
+          getPricesByItemId( item_id );
+        });
+      }
+    },
+    error: function( err ){
+      console.log( err );
+    }
+  });
+}
+
+var prices = [];
+function getPricesByItemId( item_id ){
+  var obj = getBusyOverlay( 'viewport', {color:'black', opacity:0.5, text:'loading..', style:'text-decoration:blink; font-weight:bold; font-size:12px; color:white;' } );
+  prices = [];
+  $.ajax({
+    type: 'GET',
+    url: '/pricesByItemId?item_id=' + item_id,
+    success: function( result ){
+      obj.remove();
+      var result = JSON.parse( result );
+      if( result.status && result.results && result.results.length ){
+        prices = result.results;
+        $('#price_list').html( '' );
+        prices.forEach( function( price ){ //. { "place_id": "15TNE", "name": "15TN自販機E", "price": 110 }
+          var a = '<a id=\'place_' + price.place_id + '\' class=\'list-group-item\' href=\'#\'>'
+            + '<span class=\'badge\'>' + price.price + '</span>'
+            + '<h3 class=\'list-group-item-heading\'>' + price.name + '</h3>'
+            //+ '<p class=\'list-group-item-text\'>' + price.price + '</p>'
+            + '</a>';
+          $('#price_list').prepend( a );
+        });
+      }
+    },
+    error: function( err ){
+      obj.remove();
+      console.log( err );
+    }
+  });
+}
+
+function getMemos( active_id ){
+  var memos = [];
+  localDB.allDocs( { include_docs: true } ).then( function( docs ){
+    if( docs && docs.rows && docs.rows.length ){
+      docs.rows.forEach( function( row ){
+        memos.push( row.doc );
+      });
+    }
+
+    if( isXS ){
+      $('#memos_list').html( '<select class="form-control" id="selectpicker" style="width:100%;"></select>' );
+      memos.forEach( function( memo ){
+        memo = sanitizeMemo( memo );
+        var o = '<option id=\'a_' + memo._id + '\' value=\'' + JSON.stringify( memo ) + '\'>' + memo.subject + '</option>';
+        $('#selectpicker').append( o );
+      });
+      var o = '<option selected id=\'a_new\' value=\'{"_id":"","_rev":"","created":"","latlng":"","subject":"","body":""}\'>(NEW)</option>';
+      $('#selectpicker').append( o );
+
+      $('#selectpicker').change( function(){
+        var memo = JSON.parse( $(this).val() );
+        edit( memo._id );
+      });
+    }else{
+      $('#memos_list').html( '' );
+      memos.forEach( function( memo ){
+        memo = sanitizeMemo( memo );
+        var a = '<a id=\'a_' + memo._id + '\' class=\'list-group-item\' href=\'#\' onClick=\'edit("' + memo._id + '")\'>'
+          + '<h3 class=\'list-group-item-heading\'>' + memo.subject + '</h3>'
+          + '<p class=\'list-group-item-text\'>' + memo.updated + '</p>'
+          + '</a>';
+        $('#memos_list').append( a );
+      });
+      var a = '<a id=\'a_new\' class=\'list-group-item\' href=\'#\' onClick=\'edit("")\'>'
+        + '<h3 class=\'list-group-item-heading\'>(NEW)</h3>'
+        + '<p class=\'list-group-item-text\'></p>'
+        + '</a>';
+      $('#memos_list').append( a );
+    }
+
+    activeMemo( active_id );
+  }).catch( function( err ){
+    console.log( err );
+  });
+}
+
+
+function edit( memo_id ){
+  $('.list-group-item').removeClass( 'active' );
+  if( memo_id ){
+    $('#a_'+memo_id).addClass( 'active' );
+
+    localDB.get( memo_id ).then( function( memo ){
+      $('#memo_id').val( memo._id );
+      $('#memo_rev').val( memo._rev );
+      if( memo.created ){
+        $('#memo_created').val( memo.created );
+      }else{
+        $('#memo_created').val( new Date() );
+      }
+      $('#memo_latlng').val( memo.latlng );
+      $('#memo_subject').val( memo.subject );
+
+      $('#memo_body').val( memo.body );
+      if( !isXS ){
+        simplemde.value( memo.body );
+      }
+
+      $('#latlng_map').css( 'height','0px' );
+      $('#category_map').css( 'display','none' );
+      var latlng = eval( memo.latlng );
+      if( latlng && latlng.length && latlng[0] && latlng[1] ){
+        $('#latlng_map').css( 'height','300px' );
+        $('#category_map').css( 'display','block' );
+        $('#category_map').html( '['+latlng[0]+','+latlng[1]+']' );
+        if( map == null ){
+          map = L.map( 'latlng_map' ).setView( latlng, 15 );
+          L.tileLayer(
+            'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+              attribution: '<a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html/" target="_blank">国土地理院</a>',
+              maxZoom: 18
+            }
+          ).addTo( map );
+          marker = L.marker( latlng ).addTo( map );
+        }else{
+          var position = new L.LatLng( latlng[0], latlng[1] );
+          map.setView( position, 15 );
+          marker.setLatLng( position );
+        }
+      }
+    }).catch( function( err ){
+      console.log( err );
+    });
+  }else{
+    $('#a_new').addClass( 'active' );
+    $('#memo_id').val( '' );
+    $('#memo_rev').val( '' );
+    $('#memo_created').val( new Date() );
+    $('#memo_latlng').val( '' );
+    $('#memo_subject').val( '' );
+    $('#memo_body').val( '' );
+    if( !isXS ){
+      simplemde.value( '' );
+    }
+  }
+}
+
+
+
+function sanitize( str ){
+  return str.replace(/"/g, '&#34;').replace(/'/g, '&#39;');
+}
+function sanitizeMemo( memo ){
+  if( memo.subject ){ memo.subject = sanitize( memo.subject ); }
+  if( memo.body ){ memo.body = sanitize( memo.body ); }
+  return memo;
+}
+</script>
+<style>
+body{
+  width:100%;
+  height:100%;
+}
+div{
+  height:100%;
+}
+#memo_body{
+  width:100%;
+  height:50%;
+}
+</style>
+</head>
+<body>
+
+<div class="navbar navbar-default">
+  <div class="container">
+    <div class="navbar-header">
+      <a href="/" class="navbar-brand">KaKaKu @ HZ</a>
+      <!--
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+    </div>
+    <div class="collapse navbar-collapse target">
+      <ul class="nav navbar-nav navbar-right" id="navbar">
+      </ul>
+    -->
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <div class="col-xs-12 col-sm-3">
+      <!-- Floor Selector -->
+      <div class="list-group" id="floor_list" style="width:100%;">
+      </div>
+    </div>
+
+    <div class="col-xs-12 col-sm-9">
+      <!-- Item Selector -->
+      <div class="list-group" id="item_list" style="width:100%;">
+      </div>
+
+      <!-- Prices Ranking -->
+      <div class="list-group" id="price_list" style="width:100%;">
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
