@@ -51,10 +51,14 @@ function getFloors(){
             var o = '<option id=\'floor_' + floor.floor + '\' value=\'' + JSON.stringify( floor.floor ) + '\'>' + floor.floor + '</option>';
             $('#floorpicker').prepend( o );
           });
+          var o = '<option value=\'\'>(Select Floor)</option>';
+          $('#floorpicker').prepend( o );
 
           $('#floorpicker').change( function(){
             var floor = JSON.parse( $(this).val() );
-            getPlacesByFloor( floor );
+            if( floor ){
+              getPlacesByFloor( floor );
+            }
           });
         }else{
           $('#floor_list').html( '' );
@@ -96,7 +100,9 @@ function getPlacesByFloor( floor ){
 
         $('#itempicker').change( function(){
           var item_id = JSON.parse( $(this).val() );
-          getPricesByItemId( item_id );
+          if( item_id ){
+            getPricesByItemId( item_id );
+          }
         });
       }
     },
@@ -121,10 +127,14 @@ function getItemsByPlaceId( place_id ){
           var o = '<option id=\'item_' + item.item_id + '\' value=\'' + item.item_id + '\'>' + item.name + '</option>';
           $('#itempicker').append( o );
         });
+        var o = '<option value=\'\'>(Select Item)</option>';
+        $('#itempicker').prepend( o );
 
         $('#itempicker').change( function(){
           var item_id = JSON.parse( $(this).val() );
-          getPricesByItemId( item_id );
+          if( item_id ){
+            getPricesByItemId( item_id );
+          }
         });
       }
     },
