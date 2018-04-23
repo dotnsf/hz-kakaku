@@ -127,8 +127,8 @@ function getItemsByPlaceId( place_id ){
           var o = '<option id=\'item_' + item.item_id + '\' value=\'' + item.item_id + '\'>' + item.name + '</option>';
           $('#itempicker').append( o );
         });
-        var o = '<option value=\'\'>(Select Item)</option>';
-        $('#itempicker').prepend( o );
+        //var o = '<option value=\'\'>(Select Item)</option>';
+        //$('#itempicker').prepend( o );
 
         $('#itempicker').change( function(){
           var item_id = JSON.parse( $(this).val() );
@@ -173,124 +173,6 @@ function getPricesByItemId( item_id ){
     }
   });
 }
-
-function getMemos( active_id ){
-  var memos = [];
-  localDB.allDocs( { include_docs: true } ).then( function( docs ){
-    if( docs && docs.rows && docs.rows.length ){
-      docs.rows.forEach( function( row ){
-        memos.push( row.doc );
-      });
-    }
-
-    if( isXS ){
-      $('#memos_list').html( '<select class="form-control" id="selectpicker" style="width:100%;"></select>' );
-      memos.forEach( function( memo ){
-        memo = sanitizeMemo( memo );
-        var o = '<option id=\'a_' + memo._id + '\' value=\'' + JSON.stringify( memo ) + '\'>' + memo.subject + '</option>';
-        $('#selectpicker').append( o );
-      });
-      var o = '<option selected id=\'a_new\' value=\'{"_id":"","_rev":"","created":"","latlng":"","subject":"","body":""}\'>(NEW)</option>';
-      $('#selectpicker').append( o );
-
-      $('#selectpicker').change( function(){
-        var memo = JSON.parse( $(this).val() );
-        edit( memo._id );
-      });
-    }else{
-      $('#memos_list').html( '' );
-      memos.forEach( function( memo ){
-        memo = sanitizeMemo( memo );
-        var a = '<a id=\'a_' + memo._id + '\' class=\'list-group-item\' href=\'#\' onClick=\'edit("' + memo._id + '")\'>'
-          + '<h3 class=\'list-group-item-heading\'>' + memo.subject + '</h3>'
-          + '<p class=\'list-group-item-text\'>' + memo.updated + '</p>'
-          + '</a>';
-        $('#memos_list').append( a );
-      });
-      var a = '<a id=\'a_new\' class=\'list-group-item\' href=\'#\' onClick=\'edit("")\'>'
-        + '<h3 class=\'list-group-item-heading\'>(NEW)</h3>'
-        + '<p class=\'list-group-item-text\'></p>'
-        + '</a>';
-      $('#memos_list').append( a );
-    }
-
-    activeMemo( active_id );
-  }).catch( function( err ){
-    console.log( err );
-  });
-}
-
-
-function edit( memo_id ){
-  $('.list-group-item').removeClass( 'active' );
-  if( memo_id ){
-    $('#a_'+memo_id).addClass( 'active' );
-
-    localDB.get( memo_id ).then( function( memo ){
-      $('#memo_id').val( memo._id );
-      $('#memo_rev').val( memo._rev );
-      if( memo.created ){
-        $('#memo_created').val( memo.created );
-      }else{
-        $('#memo_created').val( new Date() );
-      }
-      $('#memo_latlng').val( memo.latlng );
-      $('#memo_subject').val( memo.subject );
-
-      $('#memo_body').val( memo.body );
-      if( !isXS ){
-        simplemde.value( memo.body );
-      }
-
-      $('#latlng_map').css( 'height','0px' );
-      $('#category_map').css( 'display','none' );
-      var latlng = eval( memo.latlng );
-      if( latlng && latlng.length && latlng[0] && latlng[1] ){
-        $('#latlng_map').css( 'height','300px' );
-        $('#category_map').css( 'display','block' );
-        $('#category_map').html( '['+latlng[0]+','+latlng[1]+']' );
-        if( map == null ){
-          map = L.map( 'latlng_map' ).setView( latlng, 15 );
-          L.tileLayer(
-            'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
-              attribution: '<a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html/" target="_blank">国土地理院</a>',
-              maxZoom: 18
-            }
-          ).addTo( map );
-          marker = L.marker( latlng ).addTo( map );
-        }else{
-          var position = new L.LatLng( latlng[0], latlng[1] );
-          map.setView( position, 15 );
-          marker.setLatLng( position );
-        }
-      }
-    }).catch( function( err ){
-      console.log( err );
-    });
-  }else{
-    $('#a_new').addClass( 'active' );
-    $('#memo_id').val( '' );
-    $('#memo_rev').val( '' );
-    $('#memo_created').val( new Date() );
-    $('#memo_latlng').val( '' );
-    $('#memo_subject').val( '' );
-    $('#memo_body').val( '' );
-    if( !isXS ){
-      simplemde.value( '' );
-    }
-  }
-}
-
-
-
-function sanitize( str ){
-  return str.replace(/"/g, '&#34;').replace(/'/g, '&#39;');
-}
-function sanitizeMemo( memo ){
-  if( memo.subject ){ memo.subject = sanitize( memo.subject ); }
-  if( memo.body ){ memo.body = sanitize( memo.body ); }
-  return memo;
-}
 </script>
 <style>
 body{
@@ -299,10 +181,6 @@ body{
 }
 div{
   height:100%;
-}
-#memo_body{
-  width:100%;
-  height:50%;
 }
 </style>
 </head>
